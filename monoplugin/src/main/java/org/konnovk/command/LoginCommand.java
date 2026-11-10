@@ -12,8 +12,6 @@ import org.konnovk.service.AuthService;
 import org.konnovk.exc.DisabledCommandException;
 import org.konnovk.exc.IncorrectArgumentsException;
 
-import java.util.Arrays;
-
 @RequiredArgsConstructor
 public class LoginCommand implements KCommand {
     private final boolean enabled;
@@ -45,19 +43,16 @@ public class LoginCommand implements KCommand {
         }
 
         char[] password = args[0].toCharArray();
-        boolean authenticated;
-        try {
-            authenticated = authService.login(player, password);
-        } finally {
-            Arrays.fill(password, '\0');
+        boolean started = authService.login(player, password, authenticated -> {
+            if (authenticated) {
+                player.sendMessage(Component.text("Авторизация успешно завершена!").color(NamedTextColor.GREEN));
+            } else {
+                player.sendMessage(Component.text("Неверный пароль.").color(NamedTextColor.RED));
+            }
+        });
+        if (!started) {
+            player.sendMessage(Component.text("Проверка пароля уже выполняется.").color(NamedTextColor.YELLOW));
         }
-
-        if (!authenticated) {
-            player.sendMessage(Component.text("Неверный пароль.").color(NamedTextColor.RED));
-            return true;
-        }
-
-        player.sendMessage(Component.text("Авторизация успешно завершена!").color(NamedTextColor.GREEN));
         return true;
     }
 }

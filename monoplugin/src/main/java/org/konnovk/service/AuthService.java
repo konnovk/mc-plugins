@@ -1,6 +1,7 @@
 package org.konnovk.service;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
+import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -12,27 +13,30 @@ import org.bukkit.scheduler.BukkitTask;
 import org.konnovk.MonoPlugin;
 import org.konnovk.Utils;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
+@Slf4j
 public class AuthService {
     private final boolean enabled;
     private final int bcryptCost;
     private final int loginTimeoutSeconds;
+    private final JavaPlugin plugin;
     private final NamespacedKey passwordHashKey;
     private final Set<UUID> authenticatedPlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> pendingOperations = ConcurrentHashMap.newKeySet();
     private final Map<UUID, BukkitTask> kickTasks = new ConcurrentHashMap<>();
 
     public AuthService(boolean enabled, int bcryptCost, int loginTimeoutSeconds) {
         this.enabled = enabled;
         this.bcryptCost = bcryptCost;
         this.loginTimeoutSeconds = loginTimeoutSeconds;
-        this.passwordHashKey = new NamespacedKey(
-                JavaPlugin.getProvidingPlugin(MonoPlugin.class),
-                "auth/password-hash"
-        );
+        this.plugin = JavaPlugin.getProvidingPlugin(MonoPlugin.class);
+        this.passwordHashKey = new NamespacedKey(plugin, "auth/password-hash");
     }
 
     public void onJoin(Player player) {
@@ -49,7 +53,7 @@ public class AuthService {
         }
 
         BukkitTask task = Bukkit.getScheduler().runTaskLater(
-                JavaPlugin.getProvidingPlugin(MonoPlugin.class),
+                plugin,
                 () -> kickIfNotAuthenticated(player.getUniqueId()),
                 Utils.secondsToTicks(loginTimeoutSeconds)
         );
@@ -69,20 +73,84 @@ public class AuthService {
         return player.getPersistentDataContainer().has(passwordHashKey, PersistentDataType.STRING);
     }
 
-    public void register(Player player, char[] password) {
-        String passwordHash = BCrypt.withDefaults().hashToString(bcryptCost, password);
-        player.getPersistentDataContainer().set(passwordHashKey, PersistentDataType.STRING, passwordHash);
-        authenticate(player);
-    }
-
-    public boolean login(Player player, char[] password) {
-        String passwordHash = player.getPersistentDataContainer().get(passwordHashKey, PersistentDataType.STRING);
-        if (passwordHash == null || !BCrypt.verifyer().verify(password, passwordHash).verified) {
+    public boolean register(Player player, char[] password, Consumer<Boolean> callback) {
+        UUID playerId = player.getUniqueId();
+        if (!pendingOperations.add(playerId)) {
+            Arrays.fill(password, '\0');
             return false;
         }
 
-        authenticate(player);
+        Bukkit.getAsyncScheduler().runNow(plugin, task -> {
+            String passwordHash = null;
+            try {
+                passwordHash = BCrypt.withDefaults().hashToString(bcryptCost, password);
+            } catch (RuntimeException e) {
+                log.error("Не удалось вычислить хеш пароля для игрока {}", playerId, e);
+            } finally {
+                Arrays.fill(password, '\0');
+            }
+
+            String result = passwordHash;
+            runOnMainThread(player, () -> {
+                if (result == null) {
+                    callback.accept(false);
+                    return;
+                }
+
+                player.getPersistentDataContainer().set(passwordHashKey, PersistentDataType.STRING, result);
+                authenticate(player);
+                callback.accept(true);
+            });
+        });
         return true;
+    }
+
+    public boolean login(Player player, char[] password, Consumer<Boolean> callback) {
+        UUID playerId = player.getUniqueId();
+        String passwordHash = player.getPersistentDataContainer().get(passwordHashKey, PersistentDataType.STRING);
+        if (passwordHash == null) {
+            Arrays.fill(password, '\0');
+            callback.accept(false);
+            return true;
+        }
+
+        if (!pendingOperations.add(playerId)) {
+            Arrays.fill(password, '\0');
+            return false;
+        }
+
+        Bukkit.getAsyncScheduler().runNow(plugin, task -> {
+            boolean authenticated;
+            try {
+                authenticated = BCrypt.verifyer().verify(password, passwordHash).verified;
+            } catch (RuntimeException e) {
+                authenticated = false;
+                log.error("Не удалось проверить пароль игрока {}", playerId, e);
+            } finally {
+                Arrays.fill(password, '\0');
+            }
+
+            boolean result = authenticated;
+            runOnMainThread(player, () -> {
+                if (result) {
+                    authenticate(player);
+                }
+                callback.accept(result);
+            });
+        });
+        return true;
+    }
+
+    private void runOnMainThread(Player player, Runnable action) {
+        Bukkit.getGlobalRegionScheduler().run(plugin, task -> {
+            try {
+                if (player.isOnline() && Bukkit.getPlayer(player.getUniqueId()) == player) {
+                    action.run();
+                }
+            } finally {
+                pendingOperations.remove(player.getUniqueId());
+            }
+        });
     }
 
     private void authenticate(Player player) {

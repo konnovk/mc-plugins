@@ -12,8 +12,6 @@ import org.konnovk.service.AuthService;
 import org.konnovk.exc.DisabledCommandException;
 import org.konnovk.exc.IncorrectArgumentsException;
 
-import java.util.Arrays;
-
 @RequiredArgsConstructor
 public class RegisterCommand implements KCommand {
     private final boolean enabled;
@@ -40,13 +38,16 @@ public class RegisterCommand implements KCommand {
         }
 
         char[] password = args[0].toCharArray();
-        try {
-            authService.register(player, password);
-        } finally {
-            Arrays.fill(password, '\0');
+        boolean started = authService.register(player, password, registered -> {
+            if (registered) {
+                player.sendMessage(Component.text("Регистрация успешно завершена!").color(NamedTextColor.GREEN));
+            } else {
+                player.sendMessage(Component.text("Не удалось завершить регистрацию. Попробуйте позже.").color(NamedTextColor.RED));
+            }
+        });
+        if (!started) {
+            player.sendMessage(Component.text("Регистрация уже выполняется.").color(NamedTextColor.YELLOW));
         }
-
-        player.sendMessage(Component.text("Регистрация успешно завершена!").color(NamedTextColor.GREEN));
         return true;
     }
 }
