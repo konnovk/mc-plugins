@@ -1,0 +1,26 @@
+name: ${project.name}
+version: ${project.version}
+description: "Моноплагин"
+
+main: org.konnovk.MonoPlugin
+
+api-version: '1.21.11'
+
+bootstrapper: io.papermc.testplugin.TestPluginBootstrap
+loader: io.papermc.testplugin.TestPluginLoader
+
+commands:
+  tpa:
+    usage: /tpa <player>
+  tpaccept:
+    usage: /tpaccept
+  sethome:
+    usage: /sethome [<name>]
+  home:
+    usage: /home [<name>]
+  homes:
+    usage: /homes
+  delhome:
+    usage: /delhome <name>
+  worldspawn:
+    usage: /worldspawn

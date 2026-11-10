@@ -1,0 +1,7 @@
+tpa:
+  enabled: true
+home:
+  enabled: true
+  max-per-player: 1
+worldspawn:
+  enabled: true
