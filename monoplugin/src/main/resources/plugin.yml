@@ -24,3 +24,7 @@ commands:
     usage: /delhome <name>
   worldspawn:
     usage: /worldspawn
+  register:
+    usage: /register <пароль>
+  login:
+    usage: /login <пароль>

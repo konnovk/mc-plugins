@@ -5,8 +5,14 @@ import org.bukkit.configuration.file.FileConfiguration;
 public record Config(
         Tpa tpa,
         Home home,
-        WorldSpawn worldSpawn
+        WorldSpawn worldSpawn,
+        Auth auth
 ) {
+    public record Auth(
+            boolean enabled,
+            int bcryptCost,
+            int loginTimeoutSeconds
+    ) {}
     public record Home(
             boolean enabled,
             int maxPerPlayer
@@ -31,6 +37,11 @@ public record Config(
                 ),
                 new WorldSpawn(
                         fileConfiguration.getBoolean("worldspawn.enabled")
+                ),
+                new Auth(
+                        fileConfiguration.getBoolean("auth.enabled", true),
+                        fileConfiguration.getInt("auth.bcrypt-cost", 10),
+                        fileConfiguration.getInt("auth.login-timeout-seconds", 60)
                 )
         );
     }
