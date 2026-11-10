@@ -3,6 +3,8 @@ package org.konnovk;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.konnovk.auth.AuthListener;
+import org.konnovk.auth.AuthService;
 import org.konnovk.command.*;
 
 @Slf4j
@@ -12,6 +14,15 @@ public class MonoPlugin extends JavaPlugin {
         Config config = Config.fromFileConfiguration(getConfig());
 
         Gson gson = new Gson();
+        AuthService authService = new AuthService(
+                config.auth().enabled(),
+                config.auth().bcryptCost(),
+                config.auth().loginTimeoutSeconds()
+        );
+
+        new RegisterCommand(config.auth().enabled(), authService).enable(this::getCommand);
+        new LoginCommand(config.auth().enabled(), authService).enable(this::getCommand);
+        getServer().getPluginManager().registerEvents(new AuthListener(authService), this);
 
         new WorldSpawnCommand(config.worldSpawn().enabled()).enable(this::getCommand);
         new SetHomeCommand(config.home().enabled(), config.home().maxPerPlayer(), gson).enable(this::getCommand);

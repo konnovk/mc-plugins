@@ -5,3 +5,7 @@ home:
   max-per-player: 1
 worldspawn:
   enabled: true
+auth:
+  enabled: true
+  bcrypt-cost: 10
+  login-timeout-seconds: 60
