@@ -8,7 +8,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.konnovk.KCommand;
-import org.konnovk.auth.AuthService;
+import org.konnovk.service.AuthService;
 import org.konnovk.exc.DisabledCommandException;
 import org.konnovk.exc.IncorrectArgumentsException;
 

@@ -1,4 +1,4 @@
-package org.konnovk.auth;
+package org.konnovk.service;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import net.kyori.adventure.text.Component;
