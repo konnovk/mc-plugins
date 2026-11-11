@@ -1,6 +1,6 @@
 package org.konnovk.exc;
 
-public class HomeNotFoundException extends RuntimeException {
+public class HomeNotFoundException extends CommandException {
     private static final String MESSAGE = "Дом %s не найден";
 
     public HomeNotFoundException(String homeName) {
