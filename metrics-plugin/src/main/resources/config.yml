@@ -1,0 +1,14 @@
+metrics:
+  enabled: true
+  # Не открывайте endpoint в публичный интернет без защиты сетью или reverse proxy.
+  host: "127.0.0.1"
+  port: 9464
+  path: "/metrics"
+
+  jvm:
+    enabled: true
+
+  minecraft:
+    enabled: true
+    update-interval-ticks: 20
+    per-world-metrics: true

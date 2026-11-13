@@ -1,0 +1,5 @@
+name: MetricsPlugin
+version: ${project.version}
+description: "Экспорт JVM и Paper метрик для Prometheus"
+main: org.konnovk.metrics.MetricsPlugin
+api-version: '1.21.11'
